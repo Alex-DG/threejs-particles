@@ -16,115 +16,144 @@ const scene = new THREE.Scene()
 /**
  * Particles
  */
-const is2d = true
 const particlesData = []
 const maxParticleCount = 1000
 const r = 800
 const rHalf = r / 2
 
+const INIT_PARTICLE_COUNT_OPT = 550
+
 const effectController = {
-  showDots: true,
+  showDots: false,
   showLines: true,
+  '2d': true,
   startAnimation: false,
-  minDistance: 150,
+  minDistance: 60,
   limitConnections: false,
   maxConnections: 20,
-  particleCount: 200,
+  particleCount: INIT_PARTICLE_COUNT_OPT,
 }
 
-let particleCount = 200
+let particleCount = 0
+
 let group
 let positions, colors
-let particles
-let pointCloud
 let particlePositions
+
+let particles, pMaterial
+let pointCloud
+
+let geometry, material
 let linesMesh
+
 let animation = false
+let is2d = true
 
-group = new THREE.Group()
-scene.add(group)
-
-const helper = new THREE.BoxHelper(
-  new THREE.Mesh(new THREE.BoxGeometry(r, r, r))
-)
-helper.material.color.setHex(0x101010)
-helper.material.blending = THREE.AdditiveBlending
-helper.material.transparent = true
-group.add(helper)
+// const helper = new THREE.BoxHelper(
+//   new THREE.Mesh(new THREE.BoxGeometry(r, r, r))
+// )
+// helper.material.color.setHex(0x101010)
+// helper.material.blending = THREE.AdditiveBlending
+// helper.material.transparent = true
+// group.add(helper)
 
 const segments = maxParticleCount * maxParticleCount
 
 positions = new Float32Array(segments * 3)
 colors = new Float32Array(segments * 3)
 
-const pMaterial = new THREE.PointsMaterial({
-  color: 0xffffff,
-  size: 3,
-  blending: THREE.AdditiveBlending,
-  transparent: true,
-  sizeAttenuation: false,
-})
+const generateParticles = () => {
+  if (group !== undefined) {
+    particles.dispose()
+    pMaterial.dispose()
 
-particles = new THREE.BufferGeometry()
-particlePositions = new Float32Array(maxParticleCount * 3)
+    geometry.dispose()
+    material.dispose()
 
-for (let i = 0; i < maxParticleCount; i++) {
-  const x = Math.random() * r - r / 2
-  const y = Math.random() * r - r / 2
-  const z = is2d ? 0 : Math.random() * r - r / 2
+    // particleCount = is2d ? 50 : 550
+    // effectController.particleCount = is2d ? 50 : 550
 
-  particlePositions[i * 3] = x
-  particlePositions[i * 3 + 1] = y
-  particlePositions[i * 3 + 2] = z
+    group.remove(pointCloud)
+    group.remove(linesMesh)
+    scene.remove(group)
+  }
 
-  const zVect3 = is2d ? 0 : -1 + Math.random() * 2
+  group = new THREE.Group()
+  scene.add(group)
 
-  // add it to the geometry
-  particlesData.push({
-    velocity: new THREE.Vector3(
-      -1 + Math.random() * 2,
-      -1 + Math.random() * 2,
-      zVect3
-    ),
-    numConnections: 0,
+  pMaterial = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 3,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    sizeAttenuation: false,
   })
+
+  particles = new THREE.BufferGeometry()
+  particlePositions = new Float32Array(maxParticleCount * 3)
+
+  for (let i = 0; i < maxParticleCount; i++) {
+    const x = Math.random() * r - r / 2
+    const y = Math.random() * r - r / 2
+    const z = is2d ? 0 : Math.random() * r - r / 2
+
+    particlePositions[i * 3] = x
+    particlePositions[i * 3 + 1] = y
+    particlePositions[i * 3 + 2] = z
+
+    const zVect3 = is2d ? 0 : -1 + Math.random() * 2
+
+    // add it to the geometry
+    particlesData.push({
+      velocity: new THREE.Vector3(
+        -1 + Math.random() * 2,
+        -1 + Math.random() * 2,
+        zVect3
+      ),
+      numConnections: 0,
+    })
+  }
+
+  particles.setDrawRange(0, particleCount)
+  particles.setAttribute(
+    'position',
+    new THREE.BufferAttribute(particlePositions, 3).setUsage(
+      THREE.DynamicDrawUsage
+    )
+  )
+
+  // create the particle system
+  pointCloud = new THREE.Points(particles, pMaterial)
+  pointCloud.visible = effectController.showDots
+  group.add(pointCloud)
+  ///
+
+  geometry = new THREE.BufferGeometry()
+
+  geometry.setAttribute(
+    'position',
+    new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage)
+  )
+  geometry.setAttribute(
+    'color',
+    new THREE.BufferAttribute(colors, 3).setUsage(THREE.DynamicDrawUsage)
+  )
+
+  geometry.computeBoundingSphere()
+
+  geometry.setDrawRange(0, 0)
+
+  material = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+  })
+
+  linesMesh = new THREE.LineSegments(geometry, material)
+  group.add(linesMesh)
 }
 
-particles.setDrawRange(0, particleCount)
-particles.setAttribute(
-  'position',
-  new THREE.BufferAttribute(particlePositions, 3).setUsage(
-    THREE.DynamicDrawUsage
-  )
-)
-
-// create the particle system
-pointCloud = new THREE.Points(particles, pMaterial)
-group.add(pointCloud)
-
-const geometry = new THREE.BufferGeometry()
-
-geometry.setAttribute(
-  'position',
-  new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage)
-)
-geometry.setAttribute(
-  'color',
-  new THREE.BufferAttribute(colors, 3).setUsage(THREE.DynamicDrawUsage)
-)
-
-geometry.computeBoundingSphere()
-
-geometry.setDrawRange(0, 0)
-
-const material = new THREE.LineBasicMaterial({
-  vertexColors: true,
-  blending: THREE.AdditiveBlending,
-  transparent: true,
-})
-
-linesMesh = new THREE.LineSegments(geometry, material)
-group.add(linesMesh)
+generateParticles()
 
 /**
  * Sizes
@@ -132,6 +161,12 @@ group.add(linesMesh)
 const sizes = {
   width: window.innerWidth,
   height: window.innerHeight,
+}
+
+// Hanldle particle count update
+const updateParticleCount = (value) => {
+  particleCount = parseInt(value)
+  particles.setDrawRange(0, particleCount)
 }
 
 // Handle window resize
@@ -149,15 +184,6 @@ window.addEventListener('resize', () => {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 })
 
-// Handle double click (not workign for safari)
-// window.addEventListener('dblclick', () => {
-//   if (!document.fullscreenElement) {
-//     canvas.requestFullscreen()
-//   } else {
-//     document.exitFullscreen()
-//   }
-// })
-// make it work with safari
 window.addEventListener('dblclick', () => {
   const fullscreenElement =
     document.fullscreenElement || document.webkitFullscreenElement
@@ -181,18 +207,22 @@ window.addEventListener('dblclick', () => {
  * Camera
  */
 const camera = new THREE.PerspectiveCamera(
-  45,
+  20,
   sizes.width / sizes.height,
   0.1,
   4000
 )
-camera.position.z = 1750
+camera.position.z = 1650
 
 // Controls
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
 
 // GUI
+gui.add(effectController, '2d').onChange((value) => {
+  is2d = value
+  generateParticles()
+})
 gui.add(effectController, 'showDots').onChange((value) => {
   pointCloud.visible = value
 })
@@ -203,13 +233,12 @@ gui.add(effectController, 'startAnimation').onChange((value) => {
   animation = value
 })
 gui.add(effectController, 'minDistance', 10, 300)
-gui.add(effectController, 'maxConnections', 0, 30, 1)
-gui
-  .add(effectController, 'particleCount', 0, maxParticleCount, 1)
-  .onChange((value) => {
-    particleCount = parseInt(value)
-    particles.setDrawRange(0, particleCount)
-  })
+// gui.add(effectController, 'maxConnections', 0, 30, 1)
+// gui
+//   .add(effectController, 'particleCount', 0, maxParticleCount, 1)
+//   .onChange((value) => {
+//     updateParticleCount(value)
+//   })
 
 /**
  * Renderer
@@ -224,12 +253,39 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 /**
  * Animate
  */
+
+let init = true
 const animate = () => {
   let vertexpos = 0
   let colorpos = 0
   let numConnected = 0
 
-  for (let i = 0; i < particleCount; i++) particlesData[i].numConnections = 0
+  if (init) {
+    if (particleCount < INIT_PARTICLE_COUNT_OPT) {
+      updateParticleCount(particleCount + 2)
+    } else {
+      const domElements = document.getElementsByClassName('property-name')
+      const optionCount = [...domElements].find(
+        (dom) => dom.innerText === 'particleCount'
+      )
+
+      if (optionCount === undefined) {
+        init = false
+
+        gui
+          .add(effectController, 'particleCount', 0, maxParticleCount, 1)
+          .onChange((value) => {
+            updateParticleCount(value)
+          })
+      }
+    }
+  }
+
+  for (let i = 0; i < particleCount; i++) {
+    if (particlesData[i].numConnections) {
+      particlesData[i].numConnections = 0
+    }
+  }
 
   for (let i = 0; i < particleCount; i++) {
     // get the particle
@@ -314,9 +370,18 @@ const tick = () => {
   const elapsedTime = clock.getElapsedTime()
 
   // group.rotation.y = elapsedTime * 0.2
+  // if (animation) {
+  //   pointCloud.rotation.z = Math.cos(elapsedTime * 0.5)
+  //   pointCloud.rotation.x = Math.sin(elapsedTime * 0.5)
+  // } else {
+  //   pointCloud.rotation.z = 0
+  //   pointCloud.rotation.x = 0
+  // }
+
   if (animation) {
-    pointCloud.rotation.z = Math.cos(elapsedTime * 0.5)
-    pointCloud.rotation.x = Math.sin(elapsedTime * 0.5)
+    linesMesh.rotation.y = Math.sin(elapsedTime * 0.5)
+  } else {
+    linesMesh.rotation.y = 0
   }
 
   animate()
