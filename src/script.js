@@ -21,14 +21,14 @@ const maxParticleCount = 1000
 const r = 800
 const rHalf = r / 2
 
-const INIT_PARTICLE_COUNT_OPT = 550
+const INIT_PARTICLE_COUNT_OPT = 350
 
 const effectController = {
   showDots: false,
   showLines: true,
   '2d': true,
   startAnimation: false,
-  minDistance: 60,
+  minDistance: 80,
   limitConnections: false,
   maxConnections: 20,
   particleCount: INIT_PARTICLE_COUNT_OPT,
@@ -207,12 +207,12 @@ window.addEventListener('dblclick', () => {
  * Camera
  */
 const camera = new THREE.PerspectiveCamera(
-  20,
+  40, // 20
   sizes.width / sizes.height,
-  0.1,
+  1,
   4000
 )
-camera.position.z = 1650
+camera.position.z = 1750
 
 // Controls
 const controls = new OrbitControls(camera, canvas)
@@ -254,15 +254,15 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
  * Animate
  */
 
-let init = true
+let stop = false
 const animate = () => {
   let vertexpos = 0
   let colorpos = 0
   let numConnected = 0
 
-  if (init) {
+  if (!stop) {
     if (particleCount < INIT_PARTICLE_COUNT_OPT) {
-      updateParticleCount(particleCount + 2)
+      updateParticleCount(particleCount + 1)
     } else {
       const domElements = document.getElementsByClassName('property-name')
       const optionCount = [...domElements].find(
@@ -270,7 +270,7 @@ const animate = () => {
       )
 
       if (optionCount === undefined) {
-        init = false
+        stop = true
 
         gui
           .add(effectController, 'particleCount', 0, maxParticleCount, 1)
@@ -369,7 +369,7 @@ const clock = new THREE.Clock()
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
 
-  // group.rotation.y = elapsedTime * 0.2
+  // group.rotation.x = elapsedTime * 0.5
   // if (animation) {
   //   pointCloud.rotation.z = Math.cos(elapsedTime * 0.5)
   //   pointCloud.rotation.x = Math.sin(elapsedTime * 0.5)
@@ -384,7 +384,7 @@ const tick = () => {
     linesMesh.rotation.y = 0
   }
 
-  animate()
+  animate(elapsedTime)
 
   // Update controls
   controls.update()
