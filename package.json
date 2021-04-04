@@ -1,7 +1,7 @@
 {
   "description": "Working on threejs particles in 2d & 3d",
   "scripts": {
-    "build": "webpack --config ./bundler/webpack.prod.js --output dist",
+    "build": "webpack --config ./bundler/webpack.prod.js",
     "dev": "webpack serve --config ./bundler/webpack.dev.js"
   },
   "dependencies": {
