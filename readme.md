@@ -1,4 +1,4 @@
-# 3js-particles
+# ThreeJS-particles
 
 ## Setup
 

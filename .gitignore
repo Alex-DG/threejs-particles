@@ -29,4 +29,5 @@ yarn-error.log*
 
 #build files
 /build
+/dist
 .vscode/*
