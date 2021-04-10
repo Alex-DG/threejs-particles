@@ -13,16 +13,11 @@ const canvas = document.querySelector('canvas.webgl')
 // Scene
 const scene = new THREE.Scene()
 
-/**
- * Particles
- */
-const particlesData = []
-const maxParticleCount = 1000
-const r = 800
-const rHalf = r / 2
-
 const INIT_PARTICLE_COUNT_OPT = 350
 
+/**
+ * GUI default options
+ */
 const effectController = {
   showDots: false,
   showLines: true,
@@ -34,16 +29,24 @@ const effectController = {
   particleCount: INIT_PARTICLE_COUNT_OPT,
 }
 
+/**
+ * Particles
+ */
+const particlesData = []
+const maxParticleCount = 1000
+const r = 800
+const rHalf = r / 2
+
 let particleCount = 0
 
 let group
 let positions, colors
 let particlePositions
 
-let particles, pMaterial
+let pointsParticles, pointsMaterial
 let pointCloud
 
-let geometry, material
+let linesGeometry, linesMaterial
 let linesMesh
 
 let animation = false
@@ -62,26 +65,26 @@ const segments = maxParticleCount * maxParticleCount
 positions = new Float32Array(segments * 3)
 colors = new Float32Array(segments * 3)
 
+const clearScene = () => {
+  // Clear points
+  pointsParticles.dispose()
+  pointsMaterial.dispose()
+  // Clear lines
+  linesGeometry.dispose()
+  linesMaterial.dispose()
+  // Remove objects from group and scene
+  group.remove(pointCloud)
+  group.remove(linesMesh)
+  scene.remove(group)
+}
+
 const generateParticles = () => {
-  if (group !== undefined) {
-    particles.dispose()
-    pMaterial.dispose()
-
-    geometry.dispose()
-    material.dispose()
-
-    // particleCount = is2d ? 50 : 550
-    // effectController.particleCount = is2d ? 50 : 550
-
-    group.remove(pointCloud)
-    group.remove(linesMesh)
-    scene.remove(group)
-  }
+  if (group !== undefined) clearScene()
 
   group = new THREE.Group()
   scene.add(group)
 
-  pMaterial = new THREE.PointsMaterial({
+  pointsMaterial = new THREE.PointsMaterial({
     color: 0xffffff,
     size: 3,
     blending: THREE.AdditiveBlending,
@@ -89,7 +92,7 @@ const generateParticles = () => {
     sizeAttenuation: false,
   })
 
-  particles = new THREE.BufferGeometry()
+  pointsParticles = new THREE.BufferGeometry()
   particlePositions = new Float32Array(maxParticleCount * 3)
 
   for (let i = 0; i < maxParticleCount; i++) {
@@ -114,42 +117,41 @@ const generateParticles = () => {
     })
   }
 
-  particles.setDrawRange(0, particleCount)
-  particles.setAttribute(
+  pointsParticles.setDrawRange(0, particleCount)
+  pointsParticles.setAttribute(
     'position',
     new THREE.BufferAttribute(particlePositions, 3).setUsage(
       THREE.DynamicDrawUsage
     )
   )
 
-  // create the particle system
-  pointCloud = new THREE.Points(particles, pMaterial)
+  // Create the particle system
+  pointCloud = new THREE.Points(pointsParticles, pointsMaterial)
   pointCloud.visible = effectController.showDots
   group.add(pointCloud)
-  ///
 
-  geometry = new THREE.BufferGeometry()
+  linesGeometry = new THREE.BufferGeometry()
 
-  geometry.setAttribute(
+  linesGeometry.setAttribute(
     'position',
     new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage)
   )
-  geometry.setAttribute(
+  linesGeometry.setAttribute(
     'color',
     new THREE.BufferAttribute(colors, 3).setUsage(THREE.DynamicDrawUsage)
   )
 
-  geometry.computeBoundingSphere()
+  linesGeometry.computeBoundingSphere()
 
-  geometry.setDrawRange(0, 0)
+  linesGeometry.setDrawRange(0, 0)
 
-  material = new THREE.LineBasicMaterial({
+  linesMaterial = new THREE.LineBasicMaterial({
     vertexColors: true,
     blending: THREE.AdditiveBlending,
     transparent: true,
   })
 
-  linesMesh = new THREE.LineSegments(geometry, material)
+  linesMesh = new THREE.LineSegments(linesGeometry, linesMaterial)
   group.add(linesMesh)
 }
 
@@ -166,7 +168,7 @@ const sizes = {
 // Hanldle particle count update
 const updateParticleCount = (value) => {
   particleCount = parseInt(value)
-  particles.setDrawRange(0, particleCount)
+  pointsParticles.setDrawRange(0, particleCount)
 }
 
 // Handle window resize
@@ -233,18 +235,19 @@ gui.add(effectController, 'startAnimation').onChange((value) => {
   animation = value
 })
 gui.add(effectController, 'minDistance', 10, 300)
+gui
+  .add(effectController, 'particleCount', 0, maxParticleCount, 1)
+  .onChange((value) => {
+    updateParticleCount(value)
+  })
 // gui.add(effectController, 'maxConnections', 0, 30, 1)
-// gui
-//   .add(effectController, 'particleCount', 0, maxParticleCount, 1)
-//   .onChange((value) => {
-//     updateParticleCount(value)
-//   })
 
 /**
  * Renderer
  */
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
+  alpha: true,
 })
 
 renderer.setSize(sizes.width, sizes.height)
@@ -253,32 +256,16 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 /**
  * Animate
  */
-
-let stop = false
 const animate = () => {
   let vertexpos = 0
   let colorpos = 0
   let numConnected = 0
 
-  if (!stop) {
-    if (particleCount < INIT_PARTICLE_COUNT_OPT) {
-      updateParticleCount(particleCount + 1)
-    } else {
-      const domElements = document.getElementsByClassName('property-name')
-      const optionCount = [...domElements].find(
-        (dom) => dom.innerText === 'particleCount'
-      )
+  if (particleCount < INIT_PARTICLE_COUNT_OPT) {
+    updateParticleCount(particleCount + 1)
+  }
 
-      if (optionCount === undefined) {
-        stop = true
-
-        gui
-          .add(effectController, 'particleCount', 0, maxParticleCount, 1)
-          .onChange((value) => {
-            updateParticleCount(value)
-          })
-      }
-    }
+  if (particleCount === 350) {
   }
 
   for (let i = 0; i < particleCount; i++) {
@@ -368,6 +355,7 @@ const clock = new THREE.Clock()
 
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
+  // const delta = clock.getDelta()
 
   // group.rotation.x = elapsedTime * 0.5
   // if (animation) {
