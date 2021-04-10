@@ -13,7 +13,7 @@ const canvas = document.querySelector('canvas.webgl')
 // Scene
 const scene = new THREE.Scene()
 
-const INIT_PARTICLE_COUNT_OPT = 350
+const INIT_PARTICLE_COUNT_OPT = 400
 
 /**
  * GUI default options
@@ -23,7 +23,7 @@ const effectController = {
   showLines: true,
   '2d': true,
   startAnimation: false,
-  minDistance: 80,
+  minDistance: 100,
   limitConnections: false,
   maxConnections: 20,
   particleCount: INIT_PARTICLE_COUNT_OPT,
@@ -209,7 +209,7 @@ window.addEventListener('dblclick', () => {
  * Camera
  */
 const camera = new THREE.PerspectiveCamera(
-  40, // 20
+  30, // 20
   sizes.width / sizes.height,
   1,
   4000
@@ -263,9 +263,6 @@ const animate = () => {
 
   if (particleCount < INIT_PARTICLE_COUNT_OPT) {
     updateParticleCount(particleCount + 1)
-  }
-
-  if (particleCount === 350) {
   }
 
   for (let i = 0; i < particleCount; i++) {
@@ -357,6 +354,9 @@ const tick = () => {
   const elapsedTime = clock.getElapsedTime()
   // const delta = clock.getDelta()
 
+  // group.rotation.x = Math.sin(elapsedTime * 0.5) * 2
+  // group.rotation.z = Math.cos(elapsedTime * 0.5) * 2
+
   // group.rotation.x = elapsedTime * 0.5
   // if (animation) {
   //   pointCloud.rotation.z = Math.cos(elapsedTime * 0.5)
@@ -365,6 +365,17 @@ const tick = () => {
   //   pointCloud.rotation.z = 0
   //   pointCloud.rotation.x = 0
   // }
+  // console.log(group)
+  // if (particleCount === 350 && group.rotation.x === 0) {
+
+  if (particleCount < INIT_PARTICLE_COUNT_OPT) {
+    // group.rotation.x = elapsedTime
+    // group.rotation.z = elapsedTime
+    group.rotation.x = Math.cos(elapsedTime * 0.5)
+    group.rotation.z = Math.cos(elapsedTime * 0.5)
+
+    console.log({ group })
+  }
 
   if (animation) {
     linesMesh.rotation.y = Math.sin(elapsedTime * 0.5)
