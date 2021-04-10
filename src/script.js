@@ -6,6 +6,8 @@ import * as dat from 'dat.gui'
 /**
  * Base
  */
+// Value
+const INIT_PARTICLE_COUNT_OPT = 400
 // Debug
 const gui = new dat.GUI()
 // Canvas
@@ -13,20 +15,19 @@ const canvas = document.querySelector('canvas.webgl')
 // Scene
 const scene = new THREE.Scene()
 
-const INIT_PARTICLE_COUNT_OPT = 400
-
 /**
  * GUI default options
  */
 const effectController = {
-  showDots: false,
+  showDots: true,
   showLines: true,
   '2d': true,
   startAnimation: false,
-  minDistance: 100,
+  minDistance: 80,
   limitConnections: false,
   maxConnections: 20,
   particleCount: INIT_PARTICLE_COUNT_OPT,
+  color: '#ffffff',
 }
 
 /**
@@ -44,10 +45,10 @@ let positions, colors
 let particlePositions
 
 let pointsParticles, pointsMaterial
-let pointCloud
+let points
 
 let linesGeometry, linesMaterial
-let linesMesh
+let lines
 
 let animation = false
 let is2d = true
@@ -73,8 +74,8 @@ const clearScene = () => {
   linesGeometry.dispose()
   linesMaterial.dispose()
   // Remove objects from group and scene
-  group.remove(pointCloud)
-  group.remove(linesMesh)
+  group.remove(points)
+  group.remove(lines)
   scene.remove(group)
 }
 
@@ -126,9 +127,9 @@ const generateParticles = () => {
   )
 
   // Create the particle system
-  pointCloud = new THREE.Points(pointsParticles, pointsMaterial)
-  pointCloud.visible = effectController.showDots
-  group.add(pointCloud)
+  points = new THREE.Points(pointsParticles, pointsMaterial)
+  points.visible = effectController.showDots
+  group.add(points)
 
   linesGeometry = new THREE.BufferGeometry()
 
@@ -151,11 +152,23 @@ const generateParticles = () => {
     transparent: true,
   })
 
-  linesMesh = new THREE.LineSegments(linesGeometry, linesMaterial)
-  group.add(linesMesh)
+  lines = new THREE.LineSegments(linesGeometry, linesMaterial)
+  group.add(lines)
 }
 
 generateParticles()
+
+// Lights
+const pointLight = new THREE.PointLight(0xffffff, 0.1)
+pointLight.position.x = 0
+pointLight.position.y = 0
+pointLight.position.z = 1750
+scene.add(pointLight)
+
+gui.addColor(effectController, 'color').onChange(() => {
+  lines.material.color.set(effectController.color)
+  points.material.color.set(effectController.color)
+})
 
 /**
  * Sizes
@@ -216,20 +229,24 @@ const camera = new THREE.PerspectiveCamera(
 )
 camera.position.z = 1750
 
-// Controls
+/**
+ * Controls
+ */
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
 
-// GUI
+/**
+ * GUI
+ */
 gui.add(effectController, '2d').onChange((value) => {
   is2d = value
   generateParticles()
 })
 gui.add(effectController, 'showDots').onChange((value) => {
-  pointCloud.visible = value
+  points.visible = value
 })
 gui.add(effectController, 'showLines').onChange((value) => {
-  linesMesh.visible = value
+  lines.visible = value
 })
 gui.add(effectController, 'startAnimation').onChange((value) => {
   animation = value
@@ -256,7 +273,12 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 /**
  * Animate
  */
-const animate = () => {
+let mouseY = 0
+const animateLinesMesh = (event) => {
+  mouseY = event.clientY
+}
+
+const animateParticles = () => {
   let vertexpos = 0
   let colorpos = 0
   let numConnected = 0
@@ -341,12 +363,17 @@ const animate = () => {
     }
   }
 
-  linesMesh.geometry.setDrawRange(0, numConnected * 2)
-  linesMesh.geometry.attributes.position.needsUpdate = true
-  linesMesh.geometry.attributes.color.needsUpdate = true
+  lines.geometry.setDrawRange(0, numConnected * 2)
+  lines.geometry.attributes.position.needsUpdate = true
+  lines.geometry.attributes.color.needsUpdate = true
 
-  pointCloud.geometry.attributes.position.needsUpdate = true
+  points.geometry.attributes.position.needsUpdate = true
 }
+
+/**
+ * Events
+ */
+document.addEventListener('mousemove', animateLinesMesh)
 
 const clock = new THREE.Clock()
 
@@ -359,11 +386,11 @@ const tick = () => {
 
   // group.rotation.x = elapsedTime * 0.5
   // if (animation) {
-  //   pointCloud.rotation.z = Math.cos(elapsedTime * 0.5)
-  //   pointCloud.rotation.x = Math.sin(elapsedTime * 0.5)
+  //   points.rotation.z = Math.cos(elapsedTime * 0.5)
+  //   points.rotation.x = Math.sin(elapsedTime * 0.5)
   // } else {
-  //   pointCloud.rotation.z = 0
-  //   pointCloud.rotation.x = 0
+  //   points.rotation.z = 0
+  //   points.rotation.x = 0
   // }
   // console.log(group)
   // if (particleCount === 350 && group.rotation.x === 0) {
@@ -374,16 +401,17 @@ const tick = () => {
     group.rotation.x = Math.cos(elapsedTime * 0.5)
     group.rotation.z = Math.cos(elapsedTime * 0.5)
 
-    console.log({ group })
+    // material.displacementScale
+    console.log({ points, lines })
   }
 
   if (animation) {
-    linesMesh.rotation.y = Math.sin(elapsedTime * 0.5)
+    lines.rotation.y = Math.sin(elapsedTime * 0.5)
   } else {
-    linesMesh.rotation.y = 0
+    lines.rotation.y = 0
   }
 
-  animate(elapsedTime)
+  animateParticles(elapsedTime)
 
   // Update controls
   controls.update()
