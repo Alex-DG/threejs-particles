@@ -8,6 +8,7 @@ body {
   /* fix scrolling down */
   overflow: hidden;
   background: rgb(27, 27, 31);
+  /* background: #282c34; */
 }
 
 .webgl {

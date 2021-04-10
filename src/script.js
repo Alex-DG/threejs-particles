@@ -19,7 +19,7 @@ const scene = new THREE.Scene()
  * GUI default options
  */
 const effectController = {
-  showDots: true,
+  showDots: false,
   showLines: true,
   '2d': true,
   startAnimation: false,
@@ -28,6 +28,7 @@ const effectController = {
   maxConnections: 20,
   particleCount: INIT_PARTICLE_COUNT_OPT,
   color: '#ffffff',
+  enableZoom: false,
 }
 
 /**
@@ -50,8 +51,14 @@ let points
 let linesGeometry, linesMaterial
 let lines
 
-let animation = false
-let is2d = true
+// Controls
+let controls
+
+// Gui
+let is2d = effectController['2d']
+
+// Others
+let ready = false
 
 // const helper = new THREE.BoxHelper(
 //   new THREE.Mesh(new THREE.BoxGeometry(r, r, r))
@@ -165,11 +172,6 @@ pointLight.position.y = 0
 pointLight.position.z = 1750
 scene.add(pointLight)
 
-gui.addColor(effectController, 'color').onChange(() => {
-  lines.material.color.set(effectController.color)
-  points.material.color.set(effectController.color)
-})
-
 /**
  * Sizes
  */
@@ -222,18 +224,20 @@ window.addEventListener('dblclick', () => {
  * Camera
  */
 const camera = new THREE.PerspectiveCamera(
-  30, // 20
+  22, // 20
   sizes.width / sizes.height,
   1,
   4000
 )
-camera.position.z = 1750
+camera.position.z = 1450
 
 /**
  * Controls
  */
-const controls = new OrbitControls(camera, canvas)
+controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
+controls.enableRotate = false
+controls.enableZoom = effectController.enableZoom
 
 /**
  * GUI
@@ -248,8 +252,9 @@ gui.add(effectController, 'showDots').onChange((value) => {
 gui.add(effectController, 'showLines').onChange((value) => {
   lines.visible = value
 })
-gui.add(effectController, 'startAnimation').onChange((value) => {
-  animation = value
+
+gui.add(effectController, 'enableZoom').onChange((value) => {
+  controls.enableZoom = value
 })
 gui.add(effectController, 'minDistance', 10, 300)
 gui
@@ -257,6 +262,11 @@ gui
   .onChange((value) => {
     updateParticleCount(value)
   })
+gui.addColor(effectController, 'color').onChange(() => {
+  lines.material.color.set(effectController.color)
+  points.material.color.set(effectController.color)
+})
+
 // gui.add(effectController, 'maxConnections', 0, 30, 1)
 
 /**
@@ -273,11 +283,6 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 /**
  * Animate
  */
-let mouseY = 0
-const animateLinesMesh = (event) => {
-  mouseY = event.clientY
-}
-
 const animateParticles = () => {
   let vertexpos = 0
   let colorpos = 0
@@ -340,7 +345,7 @@ const animateParticles = () => {
         particleData.numConnections++
         particleDataB.numConnections++
 
-        const alpha = 1.0 - dist / effectController.minDistance
+        const alpha = 1.08 - dist / effectController.minDistance
 
         positions[vertexpos++] = particlePositions[i * 3]
         positions[vertexpos++] = particlePositions[i * 3 + 1]
@@ -373,13 +378,31 @@ const animateParticles = () => {
 /**
  * Events
  */
-document.addEventListener('mousemove', animateLinesMesh)
+let mouseY = 0
+let mouseX = 0
+
+const onPointerMove = (event) => {
+  if (ready) {
+    const windowHalfX = window.innerWidth / 2
+    const windowHalfY = window.innerHeight / 2
+
+    mouseX = event.clientX - windowHalfX
+    mouseY = event.clientY - windowHalfY
+  }
+}
+
+document.addEventListener('pointermove', onPointerMove)
 
 const clock = new THREE.Clock()
 
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
   // const delta = clock.getDelta()
+
+  camera.position.x += (mouseX - camera.position.x) * 0.05
+  camera.position.y += (-mouseY + 200 - camera.position.y) * 0.05
+
+  camera.lookAt(scene.position)
 
   // group.rotation.x = Math.sin(elapsedTime * 0.5) * 2
   // group.rotation.z = Math.cos(elapsedTime * 0.5) * 2
@@ -400,16 +423,18 @@ const tick = () => {
     // group.rotation.z = elapsedTime
     group.rotation.x = Math.cos(elapsedTime * 0.5)
     group.rotation.z = Math.cos(elapsedTime * 0.5)
-
-    // material.displacementScale
-    console.log({ points, lines })
+    group.rotation.y = Math.sin(elapsedTime * 0.5)
   }
 
-  if (animation) {
-    lines.rotation.y = Math.sin(elapsedTime * 0.5)
-  } else {
-    lines.rotation.y = 0
+  if (particleCount === INIT_PARTICLE_COUNT_OPT) {
+    ready = true
   }
+
+  // if (animation) {
+  //   lines.rotation.y = Math.sin(elapsedTime * 0.5)
+  // } else {
+  //   lines.rotation.y = 0
+  // }
 
   animateParticles(elapsedTime)
 
