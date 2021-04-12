@@ -9,7 +9,7 @@ import * as dat from 'dat.gui'
 // Value
 const INIT_PARTICLE_COUNT_OPT = 400
 // Debug
-const gui = new dat.GUI()
+const gui = new dat.GUI({ width: 300 })
 // Canvas
 const canvas = document.querySelector('canvas.webgl')
 // Scene
