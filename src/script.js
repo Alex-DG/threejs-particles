@@ -29,6 +29,8 @@ const effectController = {
   particleCount: INIT_PARTICLE_COUNT_OPT,
   color: '#ffffff',
   enableZoom: false,
+  enableRotate: false,
+  enablePointerMove: true,
 }
 
 /**
@@ -56,6 +58,7 @@ let controls
 
 // Gui
 let is2d = effectController['2d']
+let enablePointerMove = effectController.enablePointerMove
 
 // Others
 let ready = false
@@ -236,7 +239,7 @@ camera.position.z = 1450
  */
 controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
-controls.enableRotate = false
+controls.enableRotate = effectController.enableRotate
 controls.enableZoom = effectController.enableZoom
 
 /**
@@ -255,6 +258,12 @@ gui.add(effectController, 'showLines').onChange((value) => {
 
 gui.add(effectController, 'enableZoom').onChange((value) => {
   controls.enableZoom = value
+})
+gui.add(effectController, 'enableRotate').onChange((value) => {
+  controls.enableRotate = value
+})
+gui.add(effectController, 'enablePointerMove').onChange((value) => {
+  enablePointerMove = value
 })
 gui.add(effectController, 'minDistance', 10, 300)
 gui
@@ -399,10 +408,12 @@ const tick = () => {
   const elapsedTime = clock.getElapsedTime()
   // const delta = clock.getDelta()
 
-  camera.position.x += (mouseX - camera.position.x) * 0.05
-  camera.position.y += (-mouseY + 200 - camera.position.y) * 0.05
+  if (enablePointerMove) {
+    camera.position.x += (mouseX - camera.position.x) * 0.05
+    camera.position.y += (-mouseY + 200 - camera.position.y) * 0.05
 
-  camera.lookAt(scene.position)
+    camera.lookAt(scene.position)
+  }
 
   // group.rotation.x = Math.sin(elapsedTime * 0.5) * 2
   // group.rotation.z = Math.cos(elapsedTime * 0.5) * 2
